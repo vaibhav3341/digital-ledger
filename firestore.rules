@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(ownerId) {
+      return signedIn() && request.auth.uid == ownerId;
+    }
+
+    function coworkerDoc(coworkerId) {
+      return get(/databases/$(database)/documents/coworkers/$(coworkerId));
+    }
+
+    function canReadCoworker(coworkerId) {
+      let coworker = coworkerDoc(coworkerId);
+      return signedIn() &&
+        (request.auth.uid == coworker.data.ownerId ||
+         request.auth.uid == coworker.data.coworkerUserId);
+    }
+
+    function canClaimCoworker() {
+      return signedIn() &&
+        resource.data.coworkerUserId == null &&
+        request.resource.data.coworkerUserId == request.auth.uid &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        request.resource.data.diff(resource.data)
+          .changedKeys()
+          .hasOnly(['coworkerUserId']);
+    }
+
+    function canClaimInvite() {
+      return signedIn() &&
+        resource.data.status == 'ACTIVE' &&
+        request.resource.data.status == 'USED' &&
+        request.resource.data.usedBy == request.auth.uid &&
+        request.resource.data.ownerId == resource.data.ownerId &&
+        request.resource.data.coworkerId == resource.data.coworkerId &&
+        request.resource.data.diff(resource.data)
+          .changedKeys()
+          .hasOnly(['status', 'usedBy', 'usedAt']);
+    }
+
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /owners/{ownerId} {
+      allow read, write: if isOwner(ownerId);
+    }
+
+    match /coworkers/{coworkerId} {
+      allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow read: if canReadCoworker(coworkerId);
+      allow update, delete: if isOwner(resource.data.ownerId) || canClaimCoworker();
+    }
+
+    match /coworkers/{coworkerId}/transactions/{txnId} {
+      allow read: if canReadCoworker(coworkerId);
+      allow create: if isOwner(request.resource.data.ownerId)
+        && request.resource.data.txnId == txnId
+        && request.resource.data.coworkerId == coworkerId
+        && request.resource.data.amount > 0
+        && request.resource.data.type in ['PAID_TO_COWORKER', 'RECEIVED_FROM_COWORKER'];
+      allow update, delete: if isOwner(resource.data.ownerId);
+    }
+
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if isOwner(request.resource.data.ownerId);
+      allow update: if isOwner(resource.data.ownerId) || canClaimInvite();
+      allow delete: if isOwner(resource.data.ownerId);
+    }
+  }
+}
