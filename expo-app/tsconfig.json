@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "lib": ["es2017"],
+    "allowJs": true,
+    "jsx": "react-native",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": ["App.tsx", "src"]
+}
