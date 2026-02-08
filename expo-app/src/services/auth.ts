@@ -11,6 +11,9 @@ export async function sendOtp(
   phoneNumber: string,
   verifier: ApplicationVerifier,
 ): Promise<ConfirmationResult> {
+  if (!auth) {
+    throw new Error('Firebase not configured.');
+  }
   return signInWithPhoneNumber(auth, phoneNumber, verifier);
 }
 
@@ -19,6 +22,9 @@ export async function confirmOtp(confirmation: ConfirmationResult, code: string)
 }
 
 export function signOut() {
+  if (!auth) {
+    throw new Error('Firebase not configured.');
+  }
   return auth.signOut();
 }
 
@@ -26,6 +32,9 @@ export async function signInOrSignUpWithEmail(
   email: string,
   password: string,
 ) {
+  if (!auth) {
+    throw new Error('Firebase not configured.');
+  }
   try {
     return await signInWithEmailAndPassword(auth, email, password);
   } catch (error: unknown) {

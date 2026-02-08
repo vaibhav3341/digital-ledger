@@ -71,7 +71,12 @@ export default function AuthScreen() {
 
   return (
     <View style={styles.container}>
-      <FirebaseRecaptchaVerifierModal ref={recaptchaVerifier} firebaseConfig={app.options} />
+      {app ? (
+        <FirebaseRecaptchaVerifierModal
+          ref={recaptchaVerifier}
+          firebaseConfig={app.options}
+        />
+      ) : null}
       <Text style={styles.title}>Shared Ledger</Text>
       <Text style={styles.subtitle}>Sign in to continue</Text>
 

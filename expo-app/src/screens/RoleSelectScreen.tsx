@@ -19,7 +19,7 @@ export default function RoleSelectScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleOwner = async () => {
-    const user = auth.currentUser;
+    const user = auth?.currentUser;
     if (!user) {
       return;
     }

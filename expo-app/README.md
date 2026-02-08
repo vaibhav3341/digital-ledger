@@ -10,6 +10,9 @@ npx expo start --tunnel
 ```
 Then open **Expo Go** on your phone and scan the QR code from the terminal.
 
+## Run Without Firebase (Frontend-Only Demo)
+If you haven't configured Firebase yet, the app will start in **Demo Mode** automatically and let you preview the UI flows with sample data.
+
 ## Configure Firebase
 1. Create a Firebase project.
 2. Enable **Authentication → Phone** (and optionally Email/Password as a fallback).

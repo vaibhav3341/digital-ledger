@@ -3,6 +3,7 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import { UserProfile } from '../models/types';
+import { firebaseEnabled } from '../services/env';
 
 export default function useAuth() {
   const [authUser, setAuthUser] = useState<User | null>(null);
@@ -10,6 +11,13 @@ export default function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!firebaseEnabled || !auth) {
+      setAuthUser(null);
+      setProfile(null);
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setAuthUser(user);
       if (!user) {
@@ -21,6 +29,11 @@ export default function useAuth() {
 
   useEffect(() => {
     if (!authUser) {
+      setLoading(false);
+      return;
+    }
+
+    if (!db) {
       setLoading(false);
       return;
     }

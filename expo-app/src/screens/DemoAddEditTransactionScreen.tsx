@@ -4,28 +4,24 @@ import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Button from '../components/Button';
 import Input from '../components/Input';
-import useTransactions from '../hooks/useTransactions';
+import { useDemo } from '../demo/DemoProvider';
 import { RootStackParamList } from '../navigation/RootNavigator';
-import {
-  createTransaction,
-  deleteTransaction,
-  updateTransaction,
-} from '../services/firestore';
 import { TransactionType } from '../models/types';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
 import { createUuid } from '../utils/uuid';
-import { auth } from '../services/firebase';
 
-export default function AddEditTransactionScreen() {
+export default function DemoAddEditTransactionScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'AddEditTransaction'>>();
   const { coworkerId, txnId } = route.params;
-  const { transactions } = useTransactions(coworkerId);
+  const { transactionsByCoworker, addTransaction, updateTransaction, deleteTransaction } = useDemo();
+
+  const transactions = transactionsByCoworker[coworkerId] || [];
   const existing = useMemo(
-    () => transactions.find((txn) => txn.txnId === txnId),
+    () => transactions.find((t) => t.txnId === txnId),
     [transactions, txnId],
   );
 
@@ -35,7 +31,6 @@ export default function AddEditTransactionScreen() {
   const [note, setNote] = useState('');
   const [paymentMode, setPaymentMode] = useState('');
   const [referenceId, setReferenceId] = useState('');
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!existing) {
@@ -48,64 +43,46 @@ export default function AddEditTransactionScreen() {
     setReferenceId(existing.referenceId || '');
   }, [existing]);
 
-  const handleSave = async () => {
-    const user = auth?.currentUser;
-    if (!user) {
-      return;
-    }
+  const handleSave = () => {
     const parsed = Number(amount);
     if (!parsed || parsed <= 0) {
       Alert.alert('Enter a valid amount');
       return;
     }
-    try {
-      setLoading(true);
-      if (existing) {
-        await updateTransaction({
-          coworkerId,
-          txnId: existing.txnId,
-          updates: {
-            amount: parsed,
-            type,
-            note: note.trim() || null,
-            paymentMode: paymentMode.trim() || null,
-            referenceId: referenceId.trim() || null,
-          },
-        });
-      } else {
-        await createTransaction({
-          ownerId: user.uid,
-          coworkerId,
-          createdBy: user.uid,
+
+    if (existing) {
+      updateTransaction({
+        coworkerId,
+        txnId: existing.txnId,
+        updates: {
           amount: parsed,
           type,
-          note: note.trim() || undefined,
-          paymentMode: paymentMode.trim() || undefined,
-          referenceId: referenceId.trim() || undefined,
-          txnId: draftTxnId,
-        });
-      }
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert('Failed to save', String(error));
-    } finally {
-      setLoading(false);
+          note: note.trim() || null,
+          paymentMode: paymentMode.trim() || null,
+          referenceId: referenceId.trim() || null,
+        },
+      });
+    } else {
+      addTransaction({
+        coworkerId,
+        amount: parsed,
+        type,
+        note: note.trim() || undefined,
+        paymentMode: paymentMode.trim() || undefined,
+        referenceId: referenceId.trim() || undefined,
+        txnId: draftTxnId,
+      });
     }
+
+    navigation.goBack();
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!existing) {
       return;
     }
-    try {
-      setLoading(true);
-      await deleteTransaction({ coworkerId, txnId: existing.txnId });
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert('Failed to delete', String(error));
-    } finally {
-      setLoading(false);
-    }
+    deleteTransaction({ coworkerId, txnId: existing.txnId });
+    navigation.goBack();
   };
 
   return (
@@ -156,19 +133,14 @@ export default function AddEditTransactionScreen() {
         onChangeText={setReferenceId}
       />
 
-      <Button
-        label={loading ? 'Saving...' : 'Save'}
-        onPress={handleSave}
-        disabled={loading}
-      />
+      <Button label="Save" onPress={handleSave} />
 
       {existing ? (
         <Button
-          label={loading ? 'Deleting...' : 'Delete'}
+          label="Delete"
           onPress={handleDelete}
           variant="danger"
           style={styles.deleteButton}
-          disabled={loading}
         />
       ) : null}
     </View>

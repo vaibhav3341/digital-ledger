@@ -18,7 +18,7 @@ export default function JoinInviteScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleJoin = async () => {
-    const user = auth.currentUser;
+    const user = auth?.currentUser;
     if (!user) {
       return;
     }

@@ -9,7 +9,7 @@ import { typography } from '../theme/typography';
 import { auth } from '../services/firebase';
 
 export default function InviteCoworkerScreen() {
-  const ownerId = auth.currentUser?.uid;
+  const ownerId = auth?.currentUser?.uid;
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);

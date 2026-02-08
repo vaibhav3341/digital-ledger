@@ -1,34 +1,39 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import Button from '../components/Button';
 import CoworkerCard from '../components/CoworkerCard';
 import EmptyState from '../components/EmptyState';
-import useCoworkers from '../hooks/useCoworkers';
-import useOwnerBalances from '../hooks/useOwnerBalances';
+import { useDemo } from '../demo/DemoProvider';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { typography } from '../theme/typography';
-import { auth } from '../services/firebase';
+import { calcBalance } from '../utils/balance';
 
-export default function OwnerHomeScreen() {
+export default function DemoOwnerHomeScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const ownerId = auth?.currentUser?.uid;
-  const { coworkers } = useCoworkers(ownerId);
-  const { balances } = useOwnerBalances(ownerId);
+  const { coworkers, transactionsByCoworker, signOut } = useDemo();
+
+  const balances = useMemo(() => {
+    const next: Record<string, { balance: number; lastActivity: Date | null }> = {};
+    coworkers.forEach((c) => {
+      const txns = transactionsByCoworker[c.id] || [];
+      next[c.id] = {
+        balance: calcBalance(txns),
+        lastActivity: txns.length ? txns[0].timestamp.toDate() : null,
+      };
+    });
+    return next;
+  }, [coworkers, transactionsByCoworker]);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Coworkers</Text>
-        <Button
-          label="Add"
-          onPress={() => navigation.navigate('InviteCoworker')}
-          variant="secondary"
-        />
+        <Button label="Sign out" onPress={signOut} variant="ghost" />
       </View>
 
       <FlatList
@@ -53,7 +58,7 @@ export default function OwnerHomeScreen() {
         ListEmptyComponent={
           <EmptyState
             title="No coworkers yet"
-            subtitle="Add a coworker to start tracking payments"
+            subtitle="This is demo data."
           />
         }
       />

@@ -18,17 +18,25 @@ import { createUuid } from '../utils/uuid';
 import { generateInviteCode } from './invites';
 import { db } from './firebase';
 
+function requireDb() {
+  if (!db) {
+    throw new Error('Firebase not configured.');
+  }
+  return db;
+}
+
 export async function createOwnerProfile(params: {
   uid: string;
   name: string;
   phone?: string;
 }) {
+  const dbx = requireDb();
   const { uid, name, phone } = params;
   const now = serverTimestamp();
 
-  const batch = writeBatch(db);
-  const userRef = doc(db, 'users', uid);
-  const ownerRef = doc(db, 'owners', uid);
+  const batch = writeBatch(dbx);
+  const userRef = doc(dbx, 'users', uid);
+  const ownerRef = doc(dbx, 'owners', uid);
 
   batch.set(userRef, {
     uid,
@@ -53,14 +61,15 @@ export async function createCoworker(params: {
   name: string;
   phone?: string;
 }) {
+  const dbx = requireDb();
   const { ownerId, name, phone } = params;
   const now = serverTimestamp();
-  const coworkerRef = doc(collection(db, 'coworkers'));
+  const coworkerRef = doc(collection(dbx, 'coworkers'));
   const coworkerId = coworkerRef.id;
   const inviteCode = generateInviteCode();
-  const inviteRef = doc(db, 'invites', inviteCode);
+  const inviteRef = doc(dbx, 'invites', inviteCode);
 
-  const batch = writeBatch(db);
+  const batch = writeBatch(dbx);
   batch.set(coworkerRef, {
     ownerId,
     name,
@@ -89,8 +98,9 @@ export async function claimInvite(params: {
   name: string;
   phone?: string;
 }) {
+  const dbx = requireDb();
   const { code, uid, name, phone } = params;
-  const inviteRef = doc(db, 'invites', code);
+  const inviteRef = doc(dbx, 'invites', code);
   const inviteSnap = await getDoc(inviteRef);
 
   if (!inviteSnap.exists()) {
@@ -102,11 +112,11 @@ export async function claimInvite(params: {
     throw new Error('Invite code is no longer active.');
   }
 
-  const coworkerRef = doc(db, 'coworkers', invite.coworkerId);
-  const userRef = doc(db, 'users', uid);
+  const coworkerRef = doc(dbx, 'coworkers', invite.coworkerId);
+  const userRef = doc(dbx, 'users', uid);
   const now = serverTimestamp();
 
-  const batch = writeBatch(db);
+  const batch = writeBatch(dbx);
   batch.update(inviteRef, {
     status: 'USED',
     usedBy: uid,
@@ -140,6 +150,7 @@ export async function createTransaction(params: {
   timestamp?: Date;
   txnId?: string;
 }) {
+  requireDb();
   const {
     ownerId,
     coworkerId,
@@ -154,7 +165,7 @@ export async function createTransaction(params: {
   } = params;
 
   const id = txnId || createUuid();
-  const ref = doc(db, 'coworkers', coworkerId, 'transactions', id);
+  const ref = doc(requireDb(), 'coworkers', coworkerId, 'transactions', id);
 
   const payload: Transaction = {
     txnId: id,
@@ -179,8 +190,9 @@ export async function updateTransaction(params: {
   txnId: string;
   updates: Partial<Omit<Transaction, 'txnId' | 'ownerId' | 'coworkerId' | 'createdBy'>>;
 }) {
+  requireDb();
   const { coworkerId, txnId, updates } = params;
-  const ref = doc(db, 'coworkers', coworkerId, 'transactions', txnId);
+  const ref = doc(requireDb(), 'coworkers', coworkerId, 'transactions', txnId);
 
   await updateDoc(ref, {
     ...updates,
@@ -192,8 +204,9 @@ export async function deleteTransaction(params: {
   coworkerId: string;
   txnId: string;
 }) {
+  requireDb();
   const { coworkerId, txnId } = params;
-  const ref = doc(db, 'coworkers', coworkerId, 'transactions', txnId);
+  const ref = doc(requireDb(), 'coworkers', coworkerId, 'transactions', txnId);
 
   await updateDoc(ref, {
     isDeleted: true,
@@ -206,8 +219,9 @@ export function listenCoworkers(
   onChange: (data: Coworker[]) => void,
   onError: (error: Error) => void,
 ) {
+  const dbx = requireDb();
   const q = query(
-    collection(db, 'coworkers'),
+    collection(dbx, 'coworkers'),
     where('ownerId', '==', ownerId),
     orderBy('name'),
   );
@@ -230,8 +244,9 @@ export function listenTransactions(
   onChange: (data: Transaction[]) => void,
   onError: (error: Error) => void,
 ) {
+  const dbx = requireDb();
   const q = query(
-    collection(db, 'coworkers', coworkerId, 'transactions'),
+    collection(dbx, 'coworkers', coworkerId, 'transactions'),
     orderBy('timestamp', 'desc'),
   );
 
@@ -255,8 +270,9 @@ export function listenOwnerBalances(
   onChange: (data: Record<string, { balance: number; lastActivity: Date | null }>) => void,
   onError: (error: Error) => void,
 ) {
+  const dbx = requireDb();
   const q = query(
-    collectionGroup(db, 'transactions'),
+    collectionGroup(dbx, 'transactions'),
     where('ownerId', '==', ownerId),
   );
 
