@@ -10,6 +10,13 @@ npx expo start --tunnel
 ```
 Then open **Expo Go** on your phone and scan the QR code from the terminal.
 
+If you see an Expo Go SDK mismatch (example: Expo Go is SDK 54 but project is SDK 51), update this folder to the matching SDK by running:
+```bash
+cd expo-app
+npx expo upgrade
+npx expo install --fix
+```
+
 ## Run Without Firebase (Frontend-Only Demo)
 If you haven't configured Firebase yet, the app will start in **Demo Mode** automatically and let you preview the UI flows with sample data.
 
