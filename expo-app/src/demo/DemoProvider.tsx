@@ -161,7 +161,11 @@ export function DemoProvider({ children }: { children: React.ReactNode }) {
 export function useDemo() {
   const ctx = useContext(DemoContext);
   if (!ctx) {
-    throw new Error('useDemo must be used within DemoProvider');
+    throw new Error(
+      'useDemo must be used within DemoProvider. ' +
+        'This usually means Expo is not running from the expo-app/ folder or you are seeing a cached bundle. ' +
+        'Fix: stop Expo, run `cd expo-app && npx expo start --tunnel --clear`, then reload the app in Expo Go.',
+    );
   }
   return ctx;
 }
